@@ -1,11 +1,10 @@
-from typing import Optional
+from typing import Optional, List
 from enum import Enum
 
 from pydantic import BaseModel, Field
 
 class Role(str, Enum):
     """Enum type class for representing the particpating roles of an inteaction."""
-
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
@@ -60,3 +59,26 @@ class Memory(BaseModel):
     
     Structure for adding, removing, and retrieving messages
     """
+    messages: List[Message] = Field(default_factory=list)
+    max_messages: int = Field(default=100, description="Max number of messages the memory can hold")
+
+    def add_message(self, message: Message):
+        """Adds a single message to memory"""
+        self.messages.append(message)
+
+        # Implement limit of messages in memory
+        if len(self.messages) > self.max_messages:
+            overflow = len(self.messages) - self.messages # compute the amount of messages beyond memory limit
+            self.messages = self.messages[overflow:] # always maintain max number of messages in memory removing oldest messages
+    
+    def clear(self):
+        """Delete all messages from memory"""
+        self.messages.clear()
+    
+    def get_recent_messages(self, n: int) -> List[Message]:
+        """Return n most recent messages"""
+        return self.messages[-n:]
+    
+    def to_dict_list(self) -> List[dict]:
+        """Convert messages to list of dicts"""
+        return [msg.to_dict() for msg in self.messages]
