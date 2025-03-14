@@ -23,6 +23,17 @@ class Message(BaseModel):
     # Tool specific attributes
     tool_name: Optional[str] = Field(..., description="Name of the called tool")
 
+    def to_dict(self) -> dict:
+        """Returns the message in dict format"""
+        message = {"role": self.role}
+
+        if self.content is not None:
+            message["content"] = self.content
+        if self.tool_name is not None:
+            message["tool_name"] = self.tool_name
+        
+        return message
+
     @classmethod
     def system_message(cls, content: str) -> "Message":
         """Create a system message"""
@@ -49,4 +60,3 @@ class Memory(BaseModel):
     
     Structure for adding, removing, and retrieving messages
     """
-    messages: 
