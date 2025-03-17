@@ -16,7 +16,22 @@ class AgentState(str, Enum):
     RUNNING = "running"
     FINISHED = "finished"
     ERROR = "error"
+
+class LLMSettings(BaseModel):
+    """Wrap all LLM settings.
     
+    Implements a wrapper for OpenAI's Chat Completion API
+    """
+    # Client configuration settings
+    model_name: str = Field(..., description="The language model which will generate the completion.")
+    api_key: str = Field(..., description="API key")
+    base_url: Optional[str] = Field(..., description="Use for OpenAI/Azure OpenAI compatibility")
+
+    # (Optional) Completion configuration settings
+    temperature: float = Field(default=0.0, description="Controls randomness: lowering results in less random completions.")
+    max_completion_tokens: int = Field(default=4096, description="The maximum number of tokens to generate.")
+    top_p: float = Field(default=1, description="Controls diversity via nucleus sampling: 0.5 means half of all likelihood-weighted options are considered.")
+
 class Message(BaseModel):
     """Class for representing a chat message. 
     
@@ -27,7 +42,7 @@ class Message(BaseModel):
     content: str = Field(..., description="Content of the message")
 
     # Tool specific attributes
-    tool_name: Optional[str] = Field(..., description="Name of the called tool")
+    tool_name: Optional[str] = Field(None, description="Name of the called tool")
 
     def to_dict(self) -> dict:
         """Returns the message in dict format"""
@@ -94,3 +109,21 @@ class Memory(BaseModel):
     def to_dict_list(self) -> List[dict]:
         """Convert messages to list of dicts"""
         return [msg.to_dict() for msg in self.messages]
+
+if __name__ =="__main__":
+
+    # Testing memory and messages
+    memory = Memory()
+
+    user = Message.user_message(content="Hi, I am an user!")
+    assistant = Message.assistant_message(content="Hi, I am an assistant!")
+    memory.add_message(user)
+    memory.add_message(assistant)
+    msg_1 = memory.get_recent_messages(1)
+    print(msg_1)
+    msg_2 = memory.get_recent_messages(10)
+    print(msg_2)
+    memory.clear()
+    msg_3 = memory.get_recent_messages(1)
+    print(msg_3)
+
