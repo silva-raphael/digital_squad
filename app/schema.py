@@ -53,7 +53,6 @@ class Message(BaseModel):
         """Create a tool message"""
         return cls(role=Role.TOOL, content=content, tool_name=tool_name)
 
-
 class Memory(BaseModel):
     """Class for managing agents memory
     
@@ -76,7 +75,13 @@ class Memory(BaseModel):
         self.messages.clear()
     
     def get_recent_messages(self, n: int) -> List[Message]:
-        """Return n most recent messages"""
+        """Return n most recent messages
+        
+        Args:
+            n (int): Number of messages returned
+        Returns:
+            List[Message]: List of the n most recent Messages
+        """
         return self.messages[-n:]
     
     def to_dict_list(self) -> List[dict]:
