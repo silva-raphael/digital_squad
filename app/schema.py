@@ -10,6 +10,13 @@ class Role(str, Enum):
     ASSISTANT = "assistant"
     TOOL = "tool"
 
+class AgentState(str, Enum):
+    """Enum type class for representig the current agent state."""
+    IDLE = "idle"
+    RUNNING = "running"
+    FINISHED = "finished"
+    ERROR = "error"
+    
 class Message(BaseModel):
     """Class for representing a chat message. 
     
