@@ -1,9 +1,9 @@
 from contextlib import asynccontextmanager
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 
 from pydantic import BaseModel, Field, model_validator, ConfigDict
 from typing_extensions import Self
-from typing import Optional
+from typing import Optional, List
 
 # internal packages
 from app.logger import logger
@@ -11,7 +11,7 @@ from app.schema import AgentState, Memory, Role, Message, ROLE_TYPE
 from app.llm import LLM
 from app.prompts.default import SYSTEM_INSTRUCTIONS, NEXT_STEP
 
-class BaseAgent(BaseModel):
+class BaseAgent(ABC, BaseModel):
     """Abstract class for Agents.
 
     Abstract class that manages the base functionalities of an agent, such as: memory managament,
@@ -125,3 +125,8 @@ class BaseAgent(BaseModel):
                 logger.info("Agent process terminated. Max steps reached.")
         
         return results if results else "No steps executed"
+    
+    @property
+    def messages(self) -> List[Message]:
+        """Retrieve a list of Messages from agents memory"""
+        return self.memory.messages
