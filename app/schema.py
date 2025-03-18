@@ -86,7 +86,7 @@ class ScratchPad(BaseModel):
     """
     # Main attributes
     thought: str = Field(..., desciption="Agent's thinking process to drive action")
-    action: dict = Field(default_factory=dict description="Agent's action towards the request")
+    action: dict = Field(default_factory=dict, description="Agent's action towards the request")
 
     # Action's attributes
     tool_name: str = Field(None, description="The name of the selected tool")
