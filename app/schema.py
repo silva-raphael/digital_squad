@@ -1,8 +1,61 @@
-from typing import Optional, List, Dict, Any
+import inspect
+import functools
+
+from typing import Optional, List, Dict, Any, Callable
 from enum import Enum
 
 from pydantic import BaseModel, Field
 
+class Tool:
+    """Decorator class to convert a function into an LLM-callable tool."""
+    def __init__(self, func: Callable):
+        """Initialize and store function metadata."""
+        self.func = func
+    
+    def __call__(self) -> Any:
+        """Call method that can be used as a callable.
+        
+        Implemented to allow class to become a decorator.
+        """
+        return self
+
+    def as_tool(self) -> Dict[str, Any]:
+        """Extracts function metadata and returns the formatted dictionary.
+        
+        Dictionary serves as a LLM description tool
+        """
+        return {
+            "tool_name": self.func.__name__,
+            "summary": self.extract_summary(),
+            "input": self.extract_arguments_metadata()
+        }
+
+    def extract_summary(self) -> str:
+        """Extracts the function's docstring summary."""
+        return inspect.getdoc(self.func) or "No description provided."
+
+    def extract_arguments_metadata(self) -> Dict[str, str]:
+        """Extracts argument names and their descriptions from docstring."""
+        signature = inspect.signature(self.func)
+        arguments = {}
+        docstring = inspect.getdoc(self.func)
+
+        # Extract argument names from the signature
+        bound_args = signature.parameters
+        for param_name, param in bound_args.items():
+            if docstring:
+                # Try to find the argument's description in the docstring
+                start_index = docstring.find(f"{param_name} (")
+                if start_index != -1:
+                    end_index = docstring.find(")", start_index)
+                    description = docstring[start_index:end_index]
+                else:
+                    description = "No description available"
+                arguments[param_name] = description
+            else:
+                arguments[param_name] = "No description available"
+        return arguments
+    
 class Role(str, Enum):
     """Enum type class for representing the particpating roles of an inteaction."""
     SYSTEM = "system"
