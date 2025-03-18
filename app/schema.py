@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -77,8 +77,23 @@ class Message(BaseModel):
         """Create a tool message"""
         return cls(role=Role.TOOL, content=content, tool_name=tool_name)
 
+class ScratchPad(BaseModel):
+    """Manage agent reasoning process.
+    
+    Differently from Memory, the scratchpad is used to record the
+    agents thinking process, without persisting in memory.
+    Only the final action is persisted in order to keep memory clean.
+    """
+    # Main attributes
+    thought: str = Field(..., desciption="Agent's thinking process to drive action")
+    action: dict = Field(default_factory=dict description="Agent's action towards the request")
+
+    # Action's attributes
+    tool_name: str = Field(None, description="The name of the selected tool")
+    reason: str = Field(None, description="Reason towards choice of the tool")
+    tool_input: Dict[str, Any] = Field(default_factory=dict, description="Input parameters for the tool")
 class Memory(BaseModel):
-    """Class for managing agents memory
+    """Class for managing agents Memory
     
     Structure for adding, removing, and retrieving messages
     """

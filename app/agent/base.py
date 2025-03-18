@@ -99,7 +99,8 @@ class BaseAgent(BaseModel):
         """Abstract method controlling the next step of the agent.
         
         Must be implemented with the desired functionality.
-        """ 
+        """
+        raise NotImplementedError
 
     async def run(self, request: str) -> str:
         """Run the agent based on a request.
