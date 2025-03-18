@@ -1,10 +1,13 @@
+from contextlib import asynccontextmanager
+from abc import abstractmethod
+
 from pydantic import BaseModel, Field, model_validator, ConfigDict
 from typing_extensions import Self
 from typing import Optional
 
 # internal packages
 from app.logger import logger
-from app.schema import AgentState, Memory, Role, Message
+from app.schema import AgentState, Memory, Role, Message, ROLE_TYPE
 from app.llm import LLM
 from app.prompts.default import SYSTEM_INSTRUCTIONS, NEXT_STEP
 
@@ -31,6 +34,7 @@ class BaseAgent(BaseModel):
 
     # Execution specifications
     max_steps: int = Field(default=10, description="Max execution steps allowed for the agent")
+    current_step: int = Field(default=0, description="Current step in execution")
 
     @model_validator(mode="after")
     def initialize_agent(self) -> Self:
@@ -40,14 +44,14 @@ class BaseAgent(BaseModel):
         """
         if not self.memory:
             self.memory = Memory()
-        
         if not self.system_instructions:
             self.system_instructions = SYSTEM_INSTRUCTIONS
-        
         if not self.next_step_instructions:
             self.next_step_instructions = NEXT_STEP
+        
+        return self
 
-    def update_memory(self, role: Role, content: str) -> None:
+    def update_memory(self, role: str, content: str) -> None:
         """Add message to the agent memory
 
         Args:
@@ -61,11 +65,62 @@ class BaseAgent(BaseModel):
             "tool": Message.tool_message
         }
 
-        if role.value not in message_map:
-            raise ValueError(f"Value '{role.value}' does not exist.")
+        if role not in message_map:
+            raise ValueError(f"Role '{role}' not allowed. Allowed types are: {', '.join(role for role in ROLE_TYPE)}")
         
-        message_method = message_map[role.value]
+        message_method = message_map[role]
         message = message_method(content)
-        logger.debug(f"Message: {message}")
-        logger.debug(f"Type: {type(message)}")
+
         self.memory.add_message(message)
+    
+    @asynccontextmanager
+    async def state_context(self, new_state: AgentState):
+        """A context manager for safe state transitions.
+        
+        Args:
+            new_state (AgentState): Receives the new agent state
+        """
+        if not isinstance(new_state, AgentState):
+            raise ValueError(f"State '{new_state}' not allowed.")
+        
+        previous_state = self.state
+        self.state = new_state
+
+        try:
+            yield
+        except Exception as e:
+            self.state = AgentState.ERROR   # revert to error state if process fails 
+            raise e
+        finally:
+            self.state = previous_state
+
+    @abstractmethod
+    async def step(self) -> str:
+        """Abstract method controlling the next step of the agent.
+        
+        Must be implemented with the desired functionality.
+        """ 
+
+    async def run(self, request: str) -> str:
+        """Run the agent based on a request.
+        
+        request (str): Text request from user, other agents or tool
+        """
+        results: list[str] = []
+
+        with self.state_context(AgentState.RUNNING):
+            while self.current_step < self.max_steps and self.state != AgentState.FINISHED:
+                self.current_step += 1
+                logger.info(f"Initiating step {self.current_step}")
+                if request:
+                    self.update_memory("user", request) # Add the user request to the agent memory
+                
+                step_result = await self.step()
+                logger.info(f"Appending result from step {self.current_step}")
+                results.append(step_result)
+            
+            if self.current_step >= self.max_steps:
+                self.state = AgentState.FINISHED
+                logger.info("Agent process terminated. Max steps reached.")
+        
+        return results if results else "No steps executed"

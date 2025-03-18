@@ -19,3 +19,20 @@ class LLM:
             base_url=self.base_url,
             )
     
+    def invoke(self, messages: dict):
+        """Invokes the Language Model.
+        
+        Calls the Chat completion API.
+
+        Args:
+            messages (dict): Dictionary containing messages. {Role : str} format
+            >>> Ex: messages = {"role": Role.ASSISTANT, "content": "Hi, how can I help you?"}
+        """
+        chat_completion = self.client.chat.completions.create(
+            messages=[messages],
+            model=self.model_name
+        )
+
+        return chat_completion.choices[0].message.content
+
+    

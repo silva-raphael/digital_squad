@@ -10,6 +10,8 @@ class Role(str, Enum):
     ASSISTANT = "assistant"
     TOOL = "tool"
 
+ROLE_TYPE = [role.value for role in Role]
+
 class AgentState(str, Enum):
     """Enum type class for representig the current agent state."""
     IDLE = "idle"
