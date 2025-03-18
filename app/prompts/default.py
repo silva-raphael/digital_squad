@@ -15,4 +15,6 @@ Avaiable tools are:
 
 - multiply_two_numbers: {a: float, b: float}
 
+Do not output anything else but the template.
+
 """

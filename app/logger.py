@@ -21,6 +21,8 @@ def define_log_level(print_level="DEBUG", logfile_level="DEBUG", name: str = Non
     )   # possibility to name the log with a specific name
 
     _logger.remove()
+    # Define a custom level
+    _logger.level("THOUGHT", no=15, color="<magenta>") # Adding a specific level for agent thinking process
     _logger.add(sys.stderr, level=print_level, format=log_format)
     _logger.add(PROJECT_ROOT / f"logs/{log_name}.log", level=logfile_level)
     
@@ -34,6 +36,7 @@ if __name__ == "__main__":
     logger.warning("Warning message")
     logger.error("Error message")
     logger.critical("Critical message")
+    logger.log("THOUGHT", "Agent thought message")
 
     try:
         raise ValueError("Test error")

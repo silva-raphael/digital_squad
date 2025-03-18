@@ -38,16 +38,17 @@ class BaseAgent(ABC, BaseModel):
 
     @model_validator(mode="after")
     def initialize_agent(self) -> Self:
-        """Validate agent initialization with default values.
+        """Validate the agent is correctly initialized.
         
-        Ensure agent always has Memory, Default Prompts.
+        Ensure agents have memory with loaded system instructions
         """
-        if not self.memory:
-            self.memory = Memory()
         if not self.system_instructions:
             self.system_instructions = SYSTEM_INSTRUCTIONS
         if not self.next_step_instructions:
             self.next_step_instructions = NEXT_STEP
+        if not self.memory:
+            self.memory = Memory()
+            self.update_memory("system", self.system_instructions)
         
         return self
 
@@ -112,17 +113,20 @@ class BaseAgent(ABC, BaseModel):
         async with self.state_context(AgentState.RUNNING):
             while self.current_step < self.max_steps and self.state != AgentState.FINISHED:
                 self.current_step += 1
-                logger.info(f"Initiating step {self.current_step}")
+                logger.info(f"['{self.name}' STATUS: {self.state.value}] Initiating step {self.current_step}/{self.max_steps} for agent '{self.name}'")
                 if request:
                     self.update_memory("user", request) # Add the user request to the agent memory
                 
                 step_result = await self.step()
-                logger.info(f"Appending result from step {self.current_step}")
+                logger.info(f"['{self.name}' STATUS: {self.state.value}] Appending result from step {self.current_step}")
                 results.append(step_result)
+
+                # Clean request
+                request = None
             
             if self.current_step >= self.max_steps:
                 self.state = AgentState.FINISHED
-                logger.info("Agent process terminated. Max steps reached.")
+                logger.info(f"['{self.name}' STATUS: {self.state.value}] Agent '{self.name}' process terminated. Max steps reached.")
         
         return results if results else "No steps executed"
     
