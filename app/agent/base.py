@@ -109,7 +109,7 @@ class BaseAgent(ABC, BaseModel):
         """
         results: list[str] = []
 
-        with self.state_context(AgentState.RUNNING):
+        async with self.state_context(AgentState.RUNNING):
             while self.current_step < self.max_steps and self.state != AgentState.FINISHED:
                 self.current_step += 1
                 logger.info(f"Initiating step {self.current_step}")
@@ -130,3 +130,7 @@ class BaseAgent(ABC, BaseModel):
     def messages(self) -> List[Message]:
         """Retrieve a list of Messages from agents memory"""
         return self.memory.messages
+    
+    @property
+    def messages_dict(self) -> List[dict]:
+        return [msg.to_dict() for msg in self.memory.messages]
