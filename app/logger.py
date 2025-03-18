@@ -4,11 +4,11 @@ from datetime import datetime
 from loguru import logger as _logger
 
 # internal packages
-from config import PROJECT_ROOT
+from app.config import PROJECT_ROOT
 
 _print_level = "INFO"
 
-def define_log_level(print_level="INFO", logfile_level="DEBUG", name: str = None):
+def define_log_level(print_level="DEBUG", logfile_level="DEBUG", name: str = None):
     """Adjust log level to level above"""
     global _print_level
     _print_level = print_level

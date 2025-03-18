@@ -25,7 +25,7 @@ class LLMSettings(BaseModel):
     # Client configuration settings
     model_name: str = Field(..., description="The language model which will generate the completion.")
     api_key: str = Field(..., description="API key")
-    base_url: Optional[str] = Field(..., description="Use for OpenAI/Azure OpenAI compatibility")
+    base_url: Optional[str] = Field(None, description="Use for OpenAI/Azure OpenAI compatibility")
 
     # (Optional) Completion configuration settings
     temperature: float = Field(default=0.0, description="Controls randomness: lowering results in less random completions.")

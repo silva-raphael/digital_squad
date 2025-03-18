@@ -1,12 +1,10 @@
-from pydantic import BaseModel, Field
 from app.schema import LLMSettings
 
-# Groq API
+# Groq API,
 from groq import Groq
 
-class LLM(BaseModel):
+class LLM:
     """Wrapper class for LLM calls"""
-    # Main attributes
     def __init__(self, llm_config: LLMSettings):
         self.model_name = llm_config.model_name
         self.api_key = llm_config.api_key
@@ -16,10 +14,8 @@ class LLM(BaseModel):
         self.top_p = llm_config.top_p
 
         # Initialize model
-        global _client 
-        _client = Groq(
+        self.client = Groq(
             api_key=self.api_key,
             base_url=self.base_url,
             )
-    
     
