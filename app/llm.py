@@ -46,7 +46,7 @@ class LLM:
         
         return formatted_messages
     
-    def invoke(self, conversation_messages: List[Message], system_messages: List[Message] = None) -> str:
+    async def invoke(self, conversation_messages: List[Message], system_messages: List[Message] = None) -> str:
         """Invokes the Language Model.
         
         Calls the Chat completion API.
@@ -70,12 +70,13 @@ class LLM:
         conversation_messages = self.format_messages(conversation_messages)
         formatted_messages.append(conversation_messages)
 
-        chat_completion = self.client.chat.completions.create(
+        response = await self.client.chat.completions.create(
             messages=formatted_messages,
-            model=self.model_name
+            model=self.model_name,
         )
 
-        return chat_completion.choices[0].message.content
-    
+        return response.choices[0].message.content
 
+    async def invoke_tools(self, conversation_messages: List[Message], system_messages: List[Message] = None):
+        """ada"""
     

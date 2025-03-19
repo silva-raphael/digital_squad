@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 class ToolChoice(str, Enum):
     """Enum type class for determining specific model behaviours in tool choice"""
+    NONE = "none"
     AUTO = "auto"
     REQUIRED = "required"
 
@@ -128,6 +129,7 @@ class Memory(BaseModel):
         return [msg.to_dict() for msg in self.messages]
 
 class BaseTool(BaseModel):
+    """Base class for defining a Tool"""
     name: str = Field(..., description="Tool name. If Python function, use the name of the function.")
     description: Optional[str] = Field(None, description="Brief explanation of the tool's usage and functionalities")
     parameters: Dict[str, Any] = Field(..., description="Function arguments structure")
