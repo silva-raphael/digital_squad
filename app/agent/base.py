@@ -137,7 +137,3 @@ class BaseAgent(ABC, BaseModel):
     def messages(self) -> List[Message]:
         """Retrieve a list of Messages from agents memory"""
         return self.memory.messages
-    
-    @property
-    def messages_dict(self) -> List[dict]:
-        return [msg.to_dict() for msg in self.memory.messages]
