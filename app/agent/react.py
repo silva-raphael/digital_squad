@@ -1,13 +1,12 @@
-import re
-import ast
+from abc import abstractmethod
 
-from pydantic import Field, model_validator
-from typing_extensions import Self
+from typing import Optional
+from pydantic import Field
 
-from app.agent.base import BaseAgent, Memory
-from app.schema import ScratchPad
+from app.agent.base import BaseAgent
+from app.schema import AgentState, Memory
+from app.llm import LLM
 from app.prompts.default import NEXT_STEP, SYSTEM_INSTRUCTIONS
-from app.logger import logger
 
 class ReactAgent(BaseAgent):
     """ReAct Agent class implementation.
@@ -15,34 +14,36 @@ class ReactAgent(BaseAgent):
     Implementations of the reflect and act methods
     for enhanced agent abilities.
     """
+    # Main attributes:
+    name: str
+    description: Optional[str] = Field(None, description="Unique description of the agent")
+
+    # Prompts
+    system_instructions: str = SYSTEM_INSTRUCTIONS
     next_step_instructions: str = NEXT_STEP
-    max_steps: int = 1
 
-    async def reflect(self) -> str:
-        """Method for agent to reflect on next step and define the course of action"""
-        
-        # Add trigger for agent to start reflecting on task
-        self.update_memory("user", self.next_step_instructions)
-        request = self.messages_dict
+    # Artifacts
+    model: LLM = Field(default_factory=LLM)
+    memory: Memory = Field(default_factory=Memory)
+    state: AgentState = Field(default=AgentState.IDLE)
 
-        logger.info(f"[STATUS: {self.state.value}] '{self.name}' is currently thinking...")
-        model_response = self._format_response(self.model.invoke(request))
-        logger.log("THOUGHT", f"[STATUS: {self.state.value}] '{self.name}' thoughts: {model_response.get('thought')}")
+    # Execution specifications
+    max_steps: int = Field(default=10, description="Max execution steps allowed for the agent")
+    current_step: int = Field(default=0, description="Current step in execution")
 
-        # self.update_memory("assistant", model_response)
-        return model_response
-        
-    def act(self) -> str:
-        """Method for agent act"""
+    @abstractmethod
+    async def reflect(self) -> bool:
+        """Reflects on current state and define next action"""
     
-    def _format_response(self, model_response: str) -> dict:
-        """Internal method for formatting the model response into a dict object.
-        
-        Args:
-            model_response (str): Language model raw response
-        """
-        model_response_str = re.sub(r"```json|```", "", model_response).strip()
-        return ast.literal_eval(model_response_str)
+    @abstractmethod
+    async def act(self) -> str:
+        """Executes an action after reflecting"""
 
     async def step(self) -> str:
-        return await self.reflect()
+        reflection_result = await self.reflect()
+        
+        # Checks if any action is needed
+        if not reflection_result:
+           return "Reflecting completed: no more needed actions"
+        
+        return await self.act()
