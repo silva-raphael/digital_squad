@@ -1,8 +1,6 @@
 from typing import Callable, Optional, Dict, Any
 import functools
 
-from app.schema import BaseTool
-
 class Tool:
     """
     Converts Python functions into OpenAI function-callable format.
@@ -42,29 +40,33 @@ class Tool:
             parameters["properties"][param] = param_info
             parameters["required"].append(param)
 
-        return BaseTool(
-            name=self.name,
-            description=self.description,
-            parameters=parameters,
-            strict=self.strict
-        ).model_dump()
-
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": parameters,
+                "strict": self.strict
+            }
+        }
+    
     def __call__(self, *args, **kwargs):
         """Execute the wrapped function."""
         return self.func(*args, **kwargs)
 
-def as_tool(func: Callable = None, *, name: Optional[str] = None, description: Optional[str] = None, strict: bool = True) -> Tool:
-    """
-    Converts a function into a Tool instance.
-    Can be used as:
-    
-    - `@as_tool`
-    - `as_tool(func)`
-    """
-    if func is None:
-        return lambda f: as_tool(f, name=name, description=description, strict=strict)
+    @staticmethod
+    def as_tool(func: Callable = None, *, name: Optional[str] = None, description: Optional[str] = None, strict: bool = True) -> "Tool":
+        """
+        Converts a function into a Tool instance.
+        Can be used as:
+        
+        - `@as_tool`
+        - `as_tool(func)`
+        """
+        if func is None:
+            return lambda f: Tool.as_tool(f, name=name, description=description, strict=strict)
 
-    if not callable(func):
-        raise TypeError(f"Expected a function, but got {type(func)}")
+        if not callable(func):
+            raise TypeError(f"Expected a function, but got {type(func)}")
 
-    return Tool(func, name, description, strict)
+        return Tool(func, name, description, strict)

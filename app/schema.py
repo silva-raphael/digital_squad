@@ -63,6 +63,12 @@ class Message(BaseModel):
             message["content"] = self.content
         if self.tool_name is not None:
             message["tool_name"] = self.tool_name
+        if self.tool_id is not None:
+            message["tool_id"] = self.tool_id
+        if self.tool_call_id is not None:
+            message["tool_call_id"] = self.tool_call_id
+        if self.arguments is not None:
+            message["arguments"] = self.tool_call_id
         
         return message
 
@@ -127,13 +133,6 @@ class Memory(BaseModel):
     def to_dict_list(self) -> List[dict]:
         """Convert messages to list of dicts"""
         return [msg.to_dict() for msg in self.messages]
-
-class BaseTool(BaseModel):
-    """Base class for defining a Tool"""
-    name: str = Field(..., description="Tool name. If Python function, use the name of the function.")
-    description: Optional[str] = Field(None, description="Brief explanation of the tool's usage and functionalities")
-    parameters: Dict[str, Any] = Field(..., description="Function arguments structure")
-    strict: bool = Field(default=True, description="Ensure strict mode for function calling (recommended)")
 
 if __name__ =="__main__":
 
