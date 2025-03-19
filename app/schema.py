@@ -1,61 +1,11 @@
 import inspect
 import functools
 
-from typing import Optional, List, Dict, Any, Callable
+from typing import Optional, List
 from enum import Enum
 
 from pydantic import BaseModel, Field
 
-class Tool:
-    """Decorator class to convert a function into an LLM-callable tool."""
-    def __init__(self, func: Callable):
-        """Initialize and store function metadata."""
-        self.func = func
-    
-    def __call__(self) -> Any:
-        """Call method that can be used as a callable.
-        
-        Implemented to allow class to become a decorator.
-        """
-        return self
-
-    def as_tool(self) -> Dict[str, Any]:
-        """Extracts function metadata and returns the formatted dictionary.
-        
-        Dictionary serves as a LLM description tool
-        """
-        return {
-            "tool_name": self.func.__name__,
-            "summary": self.extract_summary(),
-            "input": self.extract_arguments_metadata()
-        }
-
-    def extract_summary(self) -> str:
-        """Extracts the function's docstring summary."""
-        return inspect.getdoc(self.func) or "No description provided."
-
-    def extract_arguments_metadata(self) -> Dict[str, str]:
-        """Extracts argument names and their descriptions from docstring."""
-        signature = inspect.signature(self.func)
-        arguments = {}
-        docstring = inspect.getdoc(self.func)
-
-        # Extract argument names from the signature
-        bound_args = signature.parameters
-        for param_name, param in bound_args.items():
-            if docstring:
-                # Try to find the argument's description in the docstring
-                start_index = docstring.find(f"{param_name} (")
-                if start_index != -1:
-                    end_index = docstring.find(")", start_index)
-                    description = docstring[start_index:end_index]
-                else:
-                    description = "No description available"
-                arguments[param_name] = description
-            else:
-                arguments[param_name] = "No description available"
-        return arguments
-    
 class Role(str, Enum):
     """Enum type class for representing the particpating roles of an inteaction."""
     SYSTEM = "system"
@@ -126,26 +76,9 @@ class Message(BaseModel):
         return cls(role=Role.ASSISTANT, content=content)
     
     @classmethod
-    def tool_message(cls, content: str, tool_name: str) -> "Message":
+    def tool_message(cls, content: str) -> "Message":
         """Create a tool message"""
-        return cls(role=Role.TOOL, content=content, tool_name=tool_name)
-
-class ScratchPad(BaseModel):
-    """Manage agent reasoning process.
-    
-    Differently from Memory, the scratchpad is used to record the
-    agents thinking process, without persisting in memory.
-    Only the final action is persisted in order to keep memory clean.
-    """
-    # Main attributes
-    thought: str = Field(None, desciption="Agent's thinking process to drive action")
-    action: dict = Field(default_factory=dict, description="Agent's action towards the request")
-
-    # Action's attributes
-    tool_name: str = Field(None, description="The name of the selected tool")
-    reason: str = Field(None, description="Reason towards choice of the tool")
-    tool_input: Dict[str, Any] = Field(default_factory=dict, description="Input parameters for the tool")
-    
+        return cls(role=Role.TOOL, content=content)  
 class Memory(BaseModel):
     """Class for managing agents Memory
     
