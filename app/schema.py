@@ -1,10 +1,12 @@
-import inspect
-import functools
-
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from enum import Enum
 
 from pydantic import BaseModel, Field
+
+class ToolChoice(str, Enum):
+    """Enum type class for determining specific model behaviours in tool choice"""
+    AUTO = "auto"
+    REQUIRED = "required"
 
 class Role(str, Enum):
     """Enum type class for representing the particpating roles of an inteaction."""
@@ -48,6 +50,9 @@ class Message(BaseModel):
 
     # Tool specific attributes
     tool_name: Optional[str] = Field(None, description="Name of the called tool")
+    tool_id: Optional[str] = Field(None, description="ID of the called tool")
+    tool_call_id: Optional[str] = Field(None, description="ID of the tool call for providing response")
+    arguments: Optional[Dict[str, Any]] = Field(None, description="Function arguments")
 
     def to_dict(self) -> dict:
         """Returns the message in dict format"""
@@ -76,9 +81,17 @@ class Message(BaseModel):
         return cls(role=Role.ASSISTANT, content=content)
     
     @classmethod
-    def tool_message(cls, content: str) -> "Message":
+    def tool_message(cls, 
+                     tool_id: str, 
+                     tool_name: str,
+                     tool_call_id: str,
+                     arguments: Dict[str, Any]) -> "Message":
         """Create a tool message"""
-        return cls(role=Role.TOOL, content=content)  
+        return cls(role=Role.TOOL, 
+                   tool_id=tool_id, 
+                   tool_name=tool_name, 
+                   tool_call_id=tool_call_id, 
+                   arguments=arguments)  
 class Memory(BaseModel):
     """Class for managing agents Memory
     
@@ -113,6 +126,12 @@ class Memory(BaseModel):
     def to_dict_list(self) -> List[dict]:
         """Convert messages to list of dicts"""
         return [msg.to_dict() for msg in self.messages]
+
+class BaseTool(BaseModel):
+    name: str = Field(..., description="Tool name. If Python function, use the name of the function.")
+    description: Optional[str] = Field(None, description="Brief explanation of the tool's usage and functionalities")
+    parameters: Dict[str, Any] = Field(..., description="Function arguments structure")
+    strict: bool = Field(default=True, description="Ensure strict mode for function calling (recommended)")
 
 if __name__ =="__main__":
 
