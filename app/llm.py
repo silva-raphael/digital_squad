@@ -1,9 +1,10 @@
 from typing import List
 
-from app.schema import LLMSettings, Message
+from app.schema import LLMSettings, Message, ToolChoice
+from app.tools.base import Tool
 
 # Groq API,
-from groq import Groq
+from groq import AsyncGroq
 
 class LLM:
     """Wrapper class for LLM calls"""
@@ -16,7 +17,7 @@ class LLM:
         self.top_p = llm_config.top_p
 
         # Initialize model
-        self.client = Groq(
+        self.client = AsyncGroq(
             api_key=self.api_key,
             base_url=self.base_url,
             )
@@ -43,6 +44,7 @@ class LLM:
         formatted_messages = []
         for message in messages:
             formatted_messages.append(message.to_dict())
+            print(formatted_messages)
         
         return formatted_messages
     
@@ -57,18 +59,19 @@ class LLM:
         
         Returns:
             Models text response
+
         Example: 
-        >>> messages = {"role": Role.ASSISTANT, "content": "Hi, how can I help you?"}
+        >>> response = llm.invoke(Message.user_message("Hi, how are you?"))
         """
         formatted_messages = []
 
         # Check if any system messages were sent to append before the conversation messages
         if system_messages:
             formatted_sys_msg = self.format_messages(system_messages)
-            formatted_messages.append(formatted_sys_msg)
+            formatted_messages.extend(formatted_sys_msg)
 
         conversation_messages = self.format_messages(conversation_messages)
-        formatted_messages.append(conversation_messages)
+        formatted_messages.extend(conversation_messages)
 
         response = await self.client.chat.completions.create(
             messages=formatted_messages,
@@ -77,6 +80,35 @@ class LLM:
 
         return response.choices[0].message.content
 
-    async def invoke_tools(self, conversation_messages: List[Message], system_messages: List[Message] = None):
-        """ada"""
-    
+    async def invoke_tools(self, 
+                           conversation_messages: List[Message], 
+                           tools: List[Tool],
+                           system_messages: List[Message] = None,
+                           tool_choice: ToolChoice = ToolChoice.AUTO) -> str:
+        """Invokes the langugae model with tools.
+        
+        Allows the use of tools for the call
+        """
+        formatted_messages = []
+
+        # Check if any system messages were sent to append before the conversation messages
+        if system_messages:
+            formatted_sys_msg = self.format_messages(system_messages)
+            formatted_messages.extend(formatted_sys_msg)
+
+        conversation_messages = self.format_messages(conversation_messages)
+        formatted_messages.extend(conversation_messages)
+
+        # Unpack all provided tools for use
+        tools_collection = [t.tool_metadata for t in tools]
+
+        print(tools_collection)
+
+        response = await self.client.chat.completions.create(
+            messages=formatted_messages,
+            model=self.model_name,
+            tools=tools_collection,
+            tool_choice=tool_choice.value,
+        )
+
+        return response.choices[0].message.tool_calls
