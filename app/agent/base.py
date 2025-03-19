@@ -108,6 +108,9 @@ class BaseAgent(ABC, BaseModel):
         
         request (str): Text request from user, other agents or tool
         """
+        if self.state != AgentState.IDLE:
+            raise ValueError(f"Agent '{self.name}' cannot be started in state {self.state}")
+
         results: list[str] = []
 
         async with self.state_context(AgentState.RUNNING):
