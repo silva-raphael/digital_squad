@@ -3,6 +3,8 @@ from typing import List
 from app.schema import LLMSettings, Message, ToolChoice
 from app.tools.base import Tool
 
+from app.logger import logger
+
 # Groq API,
 from groq import AsyncGroq
 
@@ -44,11 +46,10 @@ class LLM:
         formatted_messages = []
         for message in messages:
             formatted_messages.append(message.to_dict())
-            print(formatted_messages)
         
         return formatted_messages
     
-    async def invoke(self, conversation_messages: List[Message], system_messages: List[Message] = None) -> str:
+    async def invoke(self, conversation_messages: List[Message]) -> str:
         """Invokes the Language Model.
         
         Calls the Chat completion API.
@@ -65,11 +66,6 @@ class LLM:
         """
         formatted_messages = []
 
-        # Check if any system messages were sent to append before the conversation messages
-        if system_messages:
-            formatted_sys_msg = self.format_messages(system_messages)
-            formatted_messages.extend(formatted_sys_msg)
-
         conversation_messages = self.format_messages(conversation_messages)
         formatted_messages.extend(conversation_messages)
 
@@ -83,7 +79,6 @@ class LLM:
     async def invoke_tools(self, 
                            conversation_messages: List[Message], 
                            tools: List[Tool],
-                           system_messages: List[Message] = None,
                            tool_choice: ToolChoice = ToolChoice.AUTO) -> str:
         """Invokes the langugae model with tools.
         
@@ -91,24 +86,18 @@ class LLM:
         """
         formatted_messages = []
 
-        # Check if any system messages were sent to append before the conversation messages
-        if system_messages:
-            formatted_sys_msg = self.format_messages(system_messages)
-            formatted_messages.extend(formatted_sys_msg)
-
         conversation_messages = self.format_messages(conversation_messages)
         formatted_messages.extend(conversation_messages)
 
         # Unpack all provided tools for use
-        tools_collection = [t.tool_metadata for t in tools]
-
-        print(tools_collection)
+        toolbox = [t.tool_metadata for t in tools]
 
         response = await self.client.chat.completions.create(
             messages=formatted_messages,
             model=self.model_name,
-            tools=tools_collection,
+            tools=toolbox,
             tool_choice=tool_choice.value,
         )
 
+        print(response.choices[0].message.tool_calls)
         return response.choices[0].message.tool_calls

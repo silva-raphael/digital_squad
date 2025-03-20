@@ -1,7 +1,9 @@
 from typing import Optional, List, Dict, Any
+from typing_extensions import Self
 from enum import Enum
-
 from pydantic import BaseModel, Field
+
+from groq.types.chat import ChatCompletionMessageToolCall
 
 class ToolChoice(str, Enum):
     """Enum type class for determining specific model behaviours in tool choice"""
@@ -61,10 +63,10 @@ class Message(BaseModel):
 
         if self.content is not None:
             message["content"] = self.content
-        if self.tool_name is not None:
-            message["tool_name"] = self.tool_name
-        if self.tool_id is not None:
-            message["tool_id"] = self.tool_id
+        # if self.tool_name is not None:
+        #     message["tool_name"] = self.tool_name
+        # if self.tool_id is not None:
+        #     message["tool_id"] = self.tool_id
         if self.tool_call_id is not None:
             message["tool_call_id"] = self.tool_call_id
         if self.arguments is not None:
@@ -88,17 +90,10 @@ class Message(BaseModel):
         return cls(role=Role.ASSISTANT, content=content)
     
     @classmethod
-    def tool_message(cls, 
-                     tool_id: str, 
-                     tool_name: str,
-                     tool_call_id: str,
-                     arguments: Dict[str, Any]) -> "Message":
+    def tool_message(cls, tool_call_id: str, content: str) -> "Message":
         """Create a tool message"""
-        return cls(role=Role.TOOL, 
-                   tool_id=tool_id, 
-                   tool_name=tool_name, 
-                   tool_call_id=tool_call_id, 
-                   arguments=arguments)  
+        return cls(role=Role.TOOL, tool_call_id=tool_call_id, content=content)
+
 class Memory(BaseModel):
     """Class for managing agents Memory
     
@@ -133,6 +128,20 @@ class Memory(BaseModel):
     def to_dict_list(self) -> List[dict]:
         """Convert messages to list of dicts"""
         return [msg.to_dict() for msg in self.messages]
+
+class ToolCall(BaseModel):
+    """Class for managing the ToolCall output from Language Models"""
+    id: str = Field(None, description="Call id for referecing")
+    type: str = Field(default="function", description="Type of the tool call")
+    name: str = Field(None, description="Name of the tool selected by the language model")
+    arguments: str = Field(None, description="Arguments extracted for the selected tool")
+
+    def save(self, tool_call: ChatCompletionMessageToolCall) -> Self:
+        self.id = tool_call[0].id
+        self.name = tool_call[0].function.name
+        self.name = tool_call[0].function.arguments
+
+        return self
 
 if __name__ =="__main__":
 

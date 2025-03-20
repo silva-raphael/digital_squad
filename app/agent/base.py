@@ -48,16 +48,20 @@ class BaseAgent(ABC, BaseModel):
             self.next_step_instructions = NEXT_STEP
         if not self.memory:
             self.memory = Memory()
-            self.update_memory("system", self.system_instructions)
+        
+        # Load instructions prompts to the agent
+        self.update_memory("system", self.system_instructions)
+        self.update_memory("system", self.next_step_instructions)
         
         return self
 
-    def update_memory(self, role: str, content: str) -> None:
+    def update_memory(self, role: str, content: str, tool_call_id: Optional[str] = None) -> None:
         """Add message to the agent memory
 
         Args:
-            role (Role): Role of message sender (system, assistant, user, tool)
-            content (str): Message text content
+            role: Role of message sender (system, assistant, user, tool)
+            content: Message text content
+            tool_call_id: Needed when the role is Tool
         """
         message_map = {
             "system": Message.system_message,
@@ -69,10 +73,14 @@ class BaseAgent(ABC, BaseModel):
         if role not in message_map:
             raise ValueError(f"Role '{role}' not allowed. Allowed types are: {', '.join(role for role in ROLE_TYPE)}")
         
-        message_method = message_map[role]
-        message = message_method(content)
-
-        self.memory.add_message(message)
+        if role != "tool":
+            message_method = message_map[role]
+            message = message_method(content)
+        
+            self.memory.add_message(message)
+        else:
+            message = Message.tool_message()
+            self.memory.add_message()
     
     @asynccontextmanager
     async def state_context(self, new_state: AgentState):
@@ -124,7 +132,7 @@ class BaseAgent(ABC, BaseModel):
                 logger.info(f"['{self.name}' STATUS: {self.state.value}] Appending result from step {self.current_step}")
                 results.append(step_result)
 
-                # Clean request
+                # Clean initial request
                 request = None
             
             if self.current_step >= self.max_steps:
