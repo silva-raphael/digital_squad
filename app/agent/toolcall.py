@@ -47,6 +47,10 @@ class ToolAgent(ReactAgent):
 
         if response and response.tool_calls:
             self.tool_call.save(response.tool_calls)
+            '''REMOVE: Just a test'''
+            call_parameters = f"tool name called: {self.tool_call.name}, arguments: {self.tool_call.arguments}"
+            self.update_memory("assistant", call_parameters)
+            '''REMOVE: mAKE THIS MORE BEAUTIFUL'''
             logger.info(f"{self.name} selected tool: {self.tool_call.name}")
         if response and response.content:
             content = response.content
@@ -77,6 +81,7 @@ class ToolAgent(ReactAgent):
         # Updates memory and call llm again with tool result
         self.update_memory("tool", str(result), self.tool_call.id)
         self.tool_call.clear()  # erases previous tool call
+
         return str(result)
 
         
