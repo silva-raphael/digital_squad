@@ -76,11 +76,10 @@ class BaseAgent(ABC, BaseModel):
         if role != "tool":
             message_method = message_map[role]
             message = message_method(content)
-        
             self.memory.add_message(message)
         else:
-            message = Message.tool_message()
-            self.memory.add_message()
+            message = Message.tool_message(tool_call_id, content)
+            self.memory.add_message(message)
     
     @asynccontextmanager
     async def state_context(self, new_state: AgentState):
@@ -131,6 +130,14 @@ class BaseAgent(ABC, BaseModel):
                 step_result = await self.step()
                 logger.info(f"['{self.name}' STATUS: {self.state.value}] Appending result from step {self.current_step}")
                 results.append(step_result)
+
+                if step_result == "Reflecting completed: no more needed actions":
+                    logger.info(f"{self.name} completed the task")
+
+                    print("\n#### ANSWER ####\n")
+                    print(self.messages[-1].content)
+                    print("\n#### ------ ####\n")
+                    self.state = AgentState.FINISHED
 
                 # Clean initial request
                 request = None

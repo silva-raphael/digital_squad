@@ -24,7 +24,7 @@ class ToolAgent(ReactAgent):
     state: AgentState = Field(default=AgentState.IDLE)
 
     # Execution specifications
-    max_steps: int = Field(default=2, description="Max execution steps allowed for the agent")
+    max_steps: int = Field(default=10, description="Max execution steps allowed for the agent")
     current_step: int = Field(default=0, description="Current step in execution")
 
     # Tool specific attributes
@@ -36,23 +36,47 @@ class ToolAgent(ReactAgent):
         """Reflects on current state and define next action"""
         # Fetch memory messages
         input_messages = self.messages
-        
         try:
-            logger.info(f"[{self.name}'s status: {self.state}] {self.name} is currently reflecting...")
-            tool_call = await self.model.invoke_tools(input_messages, self.toolbox, self.tool_choice)
+            logger.info(f"[{self.name}'s status: {self.state.value}] {self.name} is currently reflecting...")
+            response = await self.model.invoke_tools(input_messages, self.toolbox, self.tool_choice)
         except Exception as e:
             logger.error(f"Error during reflection: {e}")
+            raise ValueError(f"Error during reflection: {e}")
         
         logger.info(f"[{self.name}'s status: {self.state.value}] {self.name} finished reflecting successfully!")
 
-        # Add response to ToolCall object
-        if tool_call:
-            self.tool_call.save(tool_call)
-            logger.debug(f"ToolCall: {self.tool_call.id}")
+        if response and response.tool_calls:
+            self.tool_call.save(response.tool_calls)
+            logger.info(f"{self.name} selected tool: {self.tool_call.name}")
+        if response and response.content:
+            content = response.content
+            logger.log("THOUGHT", f"{self.name} thoughts: {content}")
+
+        if self.tool_call.name:
             return True
         
-        return False
+        if content:
+            self.update_memory("assistant", content)
+            return False
 
     async def act(self) -> str:
         """Executes an action after reflecting"""
+        # Define the map of avaiable tools
+        tools_map = {tool.name: tool.func for tool in self.toolbox}
+
+        selected_tool = tools_map[self.tool_call.name]
+        try:
+            logger.info(f"{self.name} is executing the tool '{self.tool_call.name}' now...")
+            result = selected_tool(**self.tool_call.arguments)
+        except Exception as e:
+            logger.info(f"Failed to execute '{self.tool_call.name}'")
+            raise ValueError(f"Failed to execute '{self.tool_call.name}'")
+        
+        logger.info(f"Tool {self.tool_call.name} was executed successfully!. Tool result: {result}")
+
+        # Updates memory and call llm again with tool result
+        self.update_memory("tool", str(result), self.tool_call.id)
+        self.tool_call.clear()  # erases previous tool call
+        return str(result)
+
         

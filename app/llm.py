@@ -99,5 +99,4 @@ class LLM:
             tool_choice=tool_choice.value,
         )
 
-        print(response.choices[0].message.tool_calls)
-        return response.choices[0].message.tool_calls
+        return response.choices[0].message

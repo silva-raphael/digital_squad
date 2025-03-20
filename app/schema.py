@@ -1,3 +1,6 @@
+
+import json
+
 from typing import Optional, List, Dict, Any
 from typing_extensions import Self
 from enum import Enum
@@ -134,14 +137,28 @@ class ToolCall(BaseModel):
     id: str = Field(None, description="Call id for referecing")
     type: str = Field(default="function", description="Type of the tool call")
     name: str = Field(None, description="Name of the tool selected by the language model")
-    arguments: str = Field(None, description="Arguments extracted for the selected tool")
+    arguments: Dict[str, Any] = Field(None, description="Arguments extracted for the selected tool")
 
-    def save(self, tool_call: ChatCompletionMessageToolCall) -> Self:
+    def save(self, tool_call: List[ChatCompletionMessageToolCall]) -> Self:
+        """Saves a received tool call response from a language model.
+        
+        Converts a ChatCompletionMessageToolCall object to a ToolCall object
+        for better handling.
+
+        Args:
+            tool_call: ChatCompletions API default response for tool calling
+        """
         self.id = tool_call[0].id
         self.name = tool_call[0].function.name
-        self.name = tool_call[0].function.arguments
+        self.arguments = json.loads(tool_call[0].function.arguments) # Parse arguments
 
         return self
+    
+    def clear(self) -> None:
+        """Clears the ToolCall instance"""
+        self.id = None
+        self.name = None
+        self.arguments = {}
 
 if __name__ =="__main__":
 
