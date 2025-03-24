@@ -11,5 +11,5 @@ def ask_user(question: str) -> str:
             User response
     """
     
-    answer = input(question)
+    answer = input(f"{question}\n")
     return answer
