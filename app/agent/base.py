@@ -7,7 +7,7 @@ from typing import Optional, List
 
 # internal packages
 from app.logger import logger
-from app.schema import AgentState, Memory, Role, Message, ROLE_TYPE
+from app.schema import AgentState, Memory, Message, ROLE_TYPE
 from app.llm import LLM
 from app.prompts.default import SYSTEM_INSTRUCTIONS, NEXT_STEP
 
@@ -73,12 +73,27 @@ class BaseAgent(ABC, BaseModel):
         if role not in message_map:
             raise ValueError(f"Role '{role}' not allowed. Allowed types are: {', '.join(role for role in ROLE_TYPE)}")
         
-        if role != "tool":
+        elif role == "tool":
+            message = Message.tool_message(tool_call_id, content)
+            self.memory.add_message(message)
+
+        elif role == "assistant":
+            # check if this is a tool call
+            if isinstance(content, list):
+                message = Message(
+                    role="assistant",
+                    content="None",
+                    tool_calls=content  # list of tool call dicts
+                )
+            else:
+                message = Message.assistant_message(content)
+            
+            self.memory.add_message(message)
+
+
+        else:
             message_method = message_map[role]
             message = message_method(content)
-            self.memory.add_message(message)
-        else:
-            message = Message.tool_message(tool_call_id, content)
             self.memory.add_message(message)
     
     @asynccontextmanager

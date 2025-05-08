@@ -38,7 +38,9 @@ class ToolAgent(ReactAgent):
         input_messages = self.messages
         try:
             logger.info(f"[{self.name}'s status: {self.state.value}] {self.name} is currently reflecting...")
+
             response = await self.model.invoke_tools(input_messages, self.toolbox, self.tool_choice)
+
         except Exception as e:
             logger.error(f"Error during reflection: {e}")
             raise ValueError(f"Error during reflection: {e}")
@@ -47,10 +49,7 @@ class ToolAgent(ReactAgent):
 
         if response and response.tool_calls:
             self.tool_call.save(response.tool_calls)
-            '''REMOVE: Just a test'''
-            call_parameters = f"tool name called: {self.tool_call.name}, arguments: {self.tool_call.arguments}"
-            self.update_memory("assistant", call_parameters)
-            '''REMOVE: mAKE THIS MORE BEAUTIFUL'''
+            self.update_memory("assistant", [self.tool_call.to_dict()]) # append model tool call mesage
             logger.info(f"{self.name} selected tool: {self.tool_call.name}")
         if response and response.content:
             content = response.content
@@ -79,6 +78,7 @@ class ToolAgent(ReactAgent):
 
         # Updates memory and call llm again with tool result
         self.update_memory("tool", str(result), self.tool_call.id)
+
         self.tool_call.clear()  # erases previous tool call
 
         return str(result)

@@ -7,8 +7,7 @@ from app.logger import logger
 
 # Groq API,
 from groq import AsyncGroq
-
-# OpenAI API
+from openai import AsyncAzureOpenAI
 
 class LLM:
     """Wrapper class for LLM calls"""
@@ -20,10 +19,20 @@ class LLM:
         self.max_completion_tokens = llm_config.max_completion_tokens
         self.top_p = llm_config.top_p
 
-        # Initialize model
-        self.client = AsyncGroq(
-            api_key=self.api_key,
-            base_url=self.base_url,
+        # check for the API key provided to 
+        provider = llm_config.provider.lower()
+
+        if provider == "groq":
+            # Initialize model with groq
+            self.client = AsyncGroq(
+                api_key=self.api_key,
+                base_url=self.base_url,
+                )
+        elif provider == "azure":
+            self.client = AsyncAzureOpenAI(
+                azure_endpoint=self.base_url,
+                api_key=self.api_key,
+                api_version=llm_config.api_version
             )
     
     def format_messages(self, messages: List[Message]) -> List[dict]:

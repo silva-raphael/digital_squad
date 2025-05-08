@@ -39,6 +39,10 @@ class LLMSettings(BaseModel):
     model_name: str = Field(..., description="The language model which will generate the completion. For azure, deployment name.")
     api_key: str = Field(..., description="API key")
     base_url: Optional[str] = Field(None, description="Use for OpenAI/Azure OpenAI compatibility")
+    provider: str = Field("azure", description="Cloud provider for model hosting. Supported are 'groq' and 'azure'.",)
+
+    # (optional) Specific provider parameters for OpenAI
+    api_version: Optional[str] = Field(None, description="API version for OpenAI")
 
     # (Optional) Completion configuration settings
     temperature: float = Field(default=0.0, description="Controls randomness: lowering results in less random completions.")
@@ -56,6 +60,7 @@ class Message(BaseModel):
 
     # Tool specific attributes
     tool_name: Optional[str] = Field(None, description="Name of the called tool")
+    tool_calls: Optional[List] = Field(None, description="Agent tool call")
     tool_id: Optional[str] = Field(None, description="ID of the called tool")
     tool_call_id: Optional[str] = Field(None, description="ID of the tool call for providing response")
     arguments: Optional[Dict[str, Any]] = Field(None, description="Function arguments")
@@ -73,7 +78,9 @@ class Message(BaseModel):
         if self.tool_call_id is not None:
             message["tool_call_id"] = self.tool_call_id
         if self.arguments is not None:
-            message["arguments"] = self.tool_call_id
+            message["arguments"] = self.arguments
+        if self.tool_calls is not None:
+            message["tool_calls"] = self.tool_calls
         
         return message
 
@@ -153,6 +160,19 @@ class ToolCall(BaseModel):
         self.arguments = json.loads(tool_call[0].function.arguments) # Parse arguments
 
         return self
+
+    def to_dict(self) -> Dict:
+        """Returns ToolCall as a dict"""
+        tool_call_obj = {
+            "id": self.id,
+            "type": self.type,
+            "function": {
+                "name": self.name,
+                "arguments": json.dumps(self.arguments)
+            }
+        }
+
+        return tool_call_obj
     
     def clear(self) -> None:
         """Clears the ToolCall instance"""
