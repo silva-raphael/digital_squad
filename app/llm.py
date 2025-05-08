@@ -8,6 +8,8 @@ from app.logger import logger
 # Groq API,
 from groq import AsyncGroq
 
+# OpenAI API
+
 class LLM:
     """Wrapper class for LLM calls"""
     def __init__(self, llm_config: LLMSettings):

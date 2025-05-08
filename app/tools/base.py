@@ -25,17 +25,28 @@ class Tool:
         }
 
         annotations = self.func.__annotations__
+        python_to_json_type = {
+            "int": "integer",
+            "float": "number",
+            "bool": "boolean",
+            "str": "string",
+        }
+
         for param, param_type in annotations.items():
             if param == 'return':
                 continue
 
-            param_info = {"type": "string"}  # Default to string
-            if hasattr(param_type, "__origin__") and param_type.__origin__ is list:
+            param_info = {"type": "string"}  # Default
+
+            origin = getattr(param_type, "__origin__", None)
+            if origin is list:
                 param_info = {"type": "array", "items": {"type": "string"}}
-            elif hasattr(param_type, "__origin__") and param_type.__origin__ is dict:
+            elif origin is dict:
                 param_info = {"type": "object"}
-            elif isinstance(param_type, type) and param_type.__name__ in ["int", "float", "bool"]:
-                param_info = {"type": param_type.__name__}
+            elif isinstance(param_type, type):
+                json_type = python_to_json_type.get(param_type.__name__)
+                if json_type:
+                    param_info = {"type": json_type}
 
             parameters["properties"][param] = param_info
             parameters["required"].append(param)
@@ -49,6 +60,7 @@ class Tool:
                 "strict": self.strict
             }
         }
+
     
     def __call__(self, *args, **kwargs):
         """Execute the wrapped function."""

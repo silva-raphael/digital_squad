@@ -36,7 +36,7 @@ class LLMSettings(BaseModel):
     Implements a wrapper for OpenAI's Chat Completion API
     """
     # Client configuration settings
-    model_name: str = Field(..., description="The language model which will generate the completion.")
+    model_name: str = Field(..., description="The language model which will generate the completion. For azure, deployment name.")
     api_key: str = Field(..., description="API key")
     base_url: Optional[str] = Field(None, description="Use for OpenAI/Azure OpenAI compatibility")
 

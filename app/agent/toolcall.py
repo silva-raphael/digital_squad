@@ -54,7 +54,6 @@ class ToolAgent(ReactAgent):
             logger.info(f"{self.name} selected tool: {self.tool_call.name}")
         if response and response.content:
             content = response.content
-            logger.log("THOUGHT", f"{self.name} thoughts: {content}")
 
         if self.tool_call.name:
             return True
